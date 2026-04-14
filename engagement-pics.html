@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>Engagement Pics</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; }
+  
+  .screen { display: none; min-height: 100vh; padding: 24px 20px 40px; }
+  .screen.active { display: block; }
+
+  h1 { font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  h2 { font-size: 20px; font-weight: 600; margin-bottom: 8px; }
+  .sub { font-size: 14px; color: #666; line-height: 1.5; margin-bottom: 24px; }
+
+  .btn {
+    display: block; width: 100%; padding: 15px;
+    background: #1a1a1a; color: #fff;
+    border: none; border-radius: 14px;
+    font-size: 16px; font-weight: 600; cursor: pointer;
+    margin-bottom: 10px; font-family: inherit;
+    transition: opacity 0.15s;
+  }
+  .btn:active { opacity: 0.75; }
+  .btn.secondary {
+    background: #fff; color: #1a1a1a;
+    border: 1px solid #e0e0e0;
+  }
+  .btn.danger { background: #e53e3e; }
+  .btn:disabled { opacity: 0.4; }
+
+  input[type=text], input[type=number] {
+    width: 100%; padding: 13px 14px; font-size: 15px;
+    border: 1px solid #e0e0e0; border-radius: 12px;
+    background: #fff; color: #1a1a1a;
+    font-family: inherit; margin-bottom: 10px;
+    outline: none;
+  }
+  input:focus { border-color: #1a1a1a; }
+
+  .upload-zone {
+    border: 2px dashed #ccc; border-radius: 16px;
+    padding: 32px 16px; text-align: center;
+    margin-bottom: 16px; cursor: pointer;
+    background: #fff;
+  }
+  .upload-zone .icon { font-size: 36px; margin-bottom: 8px; }
+  .upload-zone p { font-size: 14px; color: #666; }
+  .upload-zone small { font-size: 12px; color: #999; margin-top: 4px; display: block; }
+
+  .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 16px; border-radius: 12px; overflow: hidden; }
+  .photo-thumb { aspect-ratio: 1; object-fit: cover; width: 100%; display: block; }
+
+  .voter-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff; border: 1px solid #e0e0e0;
+    border-radius: 20px; padding: 5px 10px 5px 12px;
+    font-size: 13px; margin: 3px;
+  }
+  .voter-pill button { background: none; border: none; cursor: pointer; color: #999; font-size: 16px; line-height: 1; padding: 0; }
+
+  .divider { height: 1px; background: #e0e0e0; margin: 20px 0; }
+
+  /* Swipe screen */
+  #s-swipe { padding: 0; display: flex; flex-direction: column; min-height: 100vh; }
+  .swipe-header { padding: 16px 20px 8px; display: flex; justify-content: space-between; align-items: center; }
+  .swipe-header h3 { font-size: 16px; font-weight: 600; }
+  .swipe-header .progress { font-size: 13px; color: #666; }
+
+  #card-area { flex: 1; position: relative; margin: 0 16px; }
+  .card {
+    position: absolute; inset: 0;
+    border-radius: 20px; overflow: hidden;
+    background: #e0e0e0;
+    touch-action: none; user-select: none; cursor: grab;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  }
+  .card img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; display: block; }
+  .overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.1s; border-radius: 20px;
+    font-size: 80px;
+  }
+  .overlay.yes { background: rgba(34,197,94,0.25); }
+  .overlay.no  { background: rgba(239,68,68,0.25); }
+
+  .swipe-hint {
+    position: absolute; bottom: 16px; left: 0; right: 0;
+    display: flex; justify-content: space-between; padding: 0 20px;
+    pointer-events: none;
+  }
+  .hint-pill {
+    background: rgba(0,0,0,0.5); color: #fff;
+    font-size: 12px; padding: 6px 12px; border-radius: 20px;
+  }
+
+  .swipe-footer { padding: 16px 20px 40px; }
+  .action-btns { display: flex; gap: 16px; justify-content: center; }
+  .action-btn {
+    width: 72px; height: 72px; border-radius: 50%;
+    border: 1px solid #e0e0e0; background: #fff;
+    font-size: 28px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: transform 0.1s;
+  }
+  .action-btn:active { transform: scale(0.9); }
+  .action-btn.yes-btn { background: #f0fdf4; border-color: #86efac; }
+  .action-btn.no-btn  { background: #fef2f2; border-color: #fca5a5; }
+
+  /* Lobby */
+  .voter-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #fff; border: 1px solid #e0e0e0;
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 8px;
+  }
+  .voter-row .name { font-size: 15px; font-weight: 500; }
+  .voter-row .status { font-size: 13px; }
+  .status.done { color: #16a34a; }
+  .status.pending { color: #999; }
+  .status.voting { color: #2563eb; font-weight: 500; }
+
+  .session-code {
+    background: #1a1a1a; color: #fff;
+    border-radius: 16px; padding: 20px;
+    text-align: center; margin-bottom: 20px;
+  }
+  .session-code .label { font-size: 12px; color: #999; margin-bottom: 6px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .session-code .code { font-size: 42px; font-weight: 700; letter-spacing: 0.15em; }
+
+  /* Results */
+  .stat-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .stat { flex: 1; background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 14px; text-align: center; }
+  .stat .n { font-size: 28px; font-weight: 700; }
+  .stat .l { font-size: 11px; color: #666; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .section-label { font-size: 12px; font-weight: 600; color: #666; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+
+  .kept-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 20px; border-radius: 12px; overflow: hidden; }
+  .kept-grid img { aspect-ratio: 1; object-fit: cover; width: 100%; display: block; }
+  .cut-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 20px; border-radius: 12px; overflow: hidden; opacity: 0.4; }
+  .cut-grid img { aspect-ratio: 1; object-fit: cover; width: 100%; display: block; }
+
+  .empty-state { text-align: center; padding: 40px 20px; color: #999; font-size: 15px; }
+  .empty-state .big { font-size: 48px; margin-bottom: 12px; }
+
+  .loading { text-align: center; padding: 60px 20px; color: #666; }
+  .loading .spinner { width: 32px; height: 32px; border: 3px solid #e0e0e0; border-top-color: #1a1a1a; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .alert { background: #fef9c3; border: 1px solid #fde047; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #713f12; margin-bottom: 16px; }
+
+  .share-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 14px; margin-bottom: 16px; }
+  .share-box p { font-size: 13px; color: #1e40af; margin-bottom: 8px; }
+  .share-url { font-size: 12px; color: #1d4ed8; word-break: break-all; font-family: monospace; }
+
+  .logo { font-size: 28px; margin-bottom: 4px; }
+  .app-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .app-sub { font-size: 14px; color: #666; margin-bottom: 32px; }
+
+  .or-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; }
+  .or-divider span { font-size: 12px; color: #999; white-space: nowrap; }
+  .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: #e0e0e0; }
+
+  .uploading-bar { height: 4px; background: #e0e0e0; border-radius: 2px; margin-bottom: 16px; overflow: hidden; }
+  .uploading-fill { height: 100%; background: #1a1a1a; border-radius: 2px; transition: width 0.3s; }
+</style>
+</head>
+<body>
+
+<!-- Home screen -->
+<div id="s-home" class="screen active">
+  <div class="logo">💍</div>
+  <div class="app-title">Engagement Pics</div>
+  <div class="app-sub">Swipe together, keep what you both love</div>
+
+  <button class="btn" onclick="showScreen('s-create')">Create a new session</button>
+  
+  <div class="or-divider"><span>or join existing</span></div>
+
+  <input type="text" id="join-code" placeholder="Enter 4-digit session code" maxlength="4" 
+    style="text-align:center;font-size:24px;font-weight:700;letter-spacing:0.2em;"
+    oninput="this.value=this.value.toUpperCase().replace(/[^0-9]/g,'')">
+  <input type="text" id="join-name" placeholder="Your name">
+  <button class="btn secondary" onclick="joinSession()">Join session →</button>
+</div>
+
+<!-- Create session screen -->
+<div id="s-create" class="screen">
+  <button onclick="showScreen('s-home')" style="background:none;border:none;cursor:pointer;font-size:15px;color:#666;font-family:inherit;margin-bottom:20px;padding:0;">← Back</button>
+  <h2>Create session</h2>
+  <p class="sub">Upload photos and set how many voters must approve a photo for it to survive.</p>
+
+  <div class="upload-zone" onclick="document.getElementById('file-in').click()">
+    <div class="icon">📷</div>
+    <p>Tap to add photos</p>
+    <small>Select multiple from your camera roll</small>
+  </div>
+  <input type="file" id="file-in" multiple accept="image/*" style="display:none">
+  <div class="uploading-bar" id="upload-bar" style="display:none"><div class="uploading-fill" id="upload-fill" style="width:0%"></div></div>
+  <div class="photo-grid" id="create-thumbs"></div>
+
+  <label style="font-size:13px;font-weight:600;color:#666;display:block;margin-bottom:6px;">YOUR NAME</label>
+  <input type="text" id="creator-name" placeholder="e.g. Kenny">
+
+  <label style="font-size:13px;font-weight:600;color:#666;display:block;margin-bottom:6px;">APPROVAL REQUIRED</label>
+  <select id="approval-mode" style="width:100%;padding:13px 14px;font-size:15px;border:1px solid #e0e0e0;border-radius:12px;background:#fff;font-family:inherit;margin-bottom:20px;appearance:none;">
+    <option value="all">Everyone must swipe right (unanimous)</option>
+    <option value="majority">Majority must swipe right</option>
+  </select>
+
+  <button class="btn" id="create-btn" onclick="createSession()">Create session →</button>
+</div>
+
+<!-- Host lobby screen -->
+<div id="s-lobby" class="screen">
+  <h2>Session <span id="lobby-code" style="font-family:monospace;"></span></h2>
+  <p class="sub" id="lobby-sub"></p>
+
+  <div class="session-code">
+    <div class="label">Share this code</div>
+    <div class="code" id="lobby-code-big"></div>
+  </div>
+
+  <div class="share-box">
+    <p>Or share this link directly:</p>
+    <div class="share-url" id="share-url"></div>
+  </div>
+
+  <div id="lobby-voters"></div>
+  <div class="divider"></div>
+  <div id="lobby-status" style="font-size:13px;color:#666;margin-bottom:16px;"></div>
+  <button class="btn" id="see-results-btn" style="display:none" onclick="showResults()">See results →</button>
+  <button class="btn secondary" onclick="confirmEndSession()">End session</button>
+</div>
+
+<!-- Swipe screen -->
+<div id="s-swipe" class="screen">
+  <div class="swipe-header">
+    <h3 id="swipe-name"></h3>
+    <div class="progress" id="swipe-progress"></div>
+  </div>
+  <div id="card-area">
+    <div class="card" id="main-card">
+      <img id="card-img" src="" alt="">
+      <div class="overlay yes" id="ov-yes">✓</div>
+      <div class="overlay no"  id="ov-no">✕</div>
+      <div class="swipe-hint">
+        <div class="hint-pill">✕ nope</div>
+        <div class="hint-pill">keep ✓</div>
+      </div>
+    </div>
+  </div>
+  <div class="swipe-footer">
+    <div class="action-btns">
+      <button class="action-btn no-btn"  onclick="castVote(false)">✕</button>
+      <button class="action-btn yes-btn" onclick="castVote(true)">✓</button>
+    </div>
+  </div>
+</div>
+
+<!-- Voter done screen -->
+<div id="s-voted" class="screen" style="text-align:center;padding-top:80px;">
+  <div style="font-size:64px;margin-bottom:16px;">🎉</div>
+  <h2 id="voted-msg" style="margin-bottom:8px;"></h2>
+  <p class="sub">Waiting for others to finish voting...</p>
+  <div id="voted-status" style="margin-top:24px;"></div>
+  <button class="btn" id="voted-results-btn" style="display:none;margin-top:24px;" onclick="showResults()">See results →</button>
+</div>
+
+<!-- Results screen -->
+<div id="s-results" class="screen">
+  <h2 style="margin-bottom:16px;">Results 🎉</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="n" id="r-kept">0</div><div class="l">Kept</div></div>
+    <div class="stat"><div class="n" id="r-total">0</div><div class="l">Total</div></div>
+    <div class="stat"><div class="n" id="r-pct">—</div><div class="l">Survived</div></div>
+  </div>
+  <div class="section-label">✓ Survived (everyone approved)</div>
+  <div class="kept-grid" id="kept-grid"></div>
+  <div id="cut-section">
+    <div class="section-label" id="cut-label"></div>
+    <div class="cut-grid" id="cut-grid"></div>
+  </div>
+  <button class="btn secondary" onclick="showScreen('s-home')">Back to home</button>
+</div>
+
+<!-- Loading -->
+<div id="s-loading" class="screen" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+  <div class="loading"><div class="spinner"></div><div id="loading-msg">Loading...</div></div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+import { getDatabase, ref, set, get, update, onValue, push, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBFRMr1-sK_m3amhGs5SETNNC53xMppMz0",
+  authDomain: "engagement-pics-5f801.firebaseapp.com",
+  projectId: "engagement-pics-5f801",
+  storageBucket: "engagement-pics-5f801.firebasestorage.app",
+  messagingSenderId: "22385263891",
+  appId: "1:22385263891:web:c51c0650fe55b707f346e6",
+  databaseURL: "https://engagement-pics-5f801-default-rtdb.firebaseio.com"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+// ── state ──────────────────────────────────────────────
+let sessionCode = null;
+let myName = null;
+let myVoterId = null;
+let sessionData = null;
+let photos = []; // local blobs for creator
+let photoObjects = []; // [{url, b64}]
+let currentPhotoIdx = 0;
+let sessionUnsub = null;
+
+// ── helpers ────────────────────────────────────────────
+window.showScreen = (id) => {
+  document.querySelectorAll('.screen').forEach(s => {
+    s.style.display = 'none'; s.classList.remove('active');
+  });
+  const el = document.getElementById(id);
+  el.style.display = 'block'; el.classList.add('active');
+};
+
+function loading(msg='Loading...') { document.getElementById('loading-msg').textContent = msg; showScreen('s-loading'); }
+
+function genCode() {
+  return String(Math.floor(1000 + Math.random() * 9000));
+}
+
+function voterId(name) {
+  return name.trim().toLowerCase().replace(/\s+/g,'_') + '_' + Date.now().toString(36);
+}
+
+// ── file handling ──────────────────────────────────────
+document.getElementById('file-in').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  photos = files;
+  renderCreateThumbs(files);
+});
+
+function renderCreateThumbs(files) {
+  const grid = document.getElementById('create-thumbs');
+  grid.innerHTML = '';
+  files.forEach(f => {
+    const img = document.createElement('img');
+    img.className = 'photo-thumb';
+    img.src = URL.createObjectURL(f);
+    grid.appendChild(img);
+  });
+}
+
+async function fileToBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+// ── create session ─────────────────────────────────────
+window.createSession = async () => {
+  const name = document.getElementById('creator-name').value.trim();
+  const mode = document.getElementById('approval-mode').value;
+  if (!photos.length) { alert('Please add photos first.'); return; }
+  if (!name) { alert('Enter your name.'); return; }
+
+  loading('Uploading photos...');
+
+  // upload photos as base64 to Firebase
+  const bar = document.getElementById('upload-bar');
+  const fill = document.getElementById('upload-fill');
+  bar.style.display = 'block';
+
+  const uploadedPhotos = [];
+  for (let i = 0; i < photos.length; i++) {
+    fill.style.width = Math.round((i / photos.length) * 100) + '%';
+    const b64 = await fileToBase64(photos[i]);
+    uploadedPhotos.push({ id: 'p' + i, data: b64 });
+  }
+  fill.style.width = '100%';
+
+  const code = genCode();
+  myName = name;
+  myVoterId = voterId(name);
+  sessionCode = code;
+
+  const voterEntry = {};
+  voterEntry[myVoterId] = { name, done: false, votes: {} };
+
+  await set(ref(db, `sessions/${code}`), {
+    code,
+    createdAt: serverTimestamp(),
+    approvalMode: mode,
+    photos: uploadedPhotos,
+    voters: voterEntry,
+    active: true
+  });
+
+  bar.style.display = 'none';
+  listenSession(code);
+  renderLobby();
+  showScreen('s-lobby');
+};
+
+// ── join session ───────────────────────────────────────
+window.joinSession = async () => {
+  const code = document.getElementById('join-code').value.trim();
+  const name = document.getElementById('join-name').value.trim();
+  if (code.length !== 4) { alert('Enter a 4-digit code.'); return; }
+  if (!name) { alert('Enter your name.'); return; }
+
+  loading('Joining session...');
+
+  const snap = await get(ref(db, `sessions/${code}`));
+  if (!snap.exists()) { alert('Session not found. Check the code.'); showScreen('s-home'); return; }
+
+  sessionData = snap.val();
+  if (!sessionData.active) { alert('This session has ended.'); showScreen('s-home'); return; }
+
+  myName = name;
+  myVoterId = voterId(name);
+  sessionCode = code;
+
+  await update(ref(db, `sessions/${code}/voters/${myVoterId}`), { name, done: false, votes: {} });
+
+  listenSession(code);
+  startSwiping();
+};
+
+// ── listen to session changes ──────────────────────────
+function listenSession(code) {
+  if (sessionUnsub) sessionUnsub();
+  const r = ref(db, `sessions/${code}`);
+  sessionUnsub = onValue(r, snap => {
+    if (!snap.exists()) return;
+    sessionData = snap.val();
+    updateLiveUI();
+  });
+}
+
+function updateLiveUI() {
+  if (!sessionData) return;
+  const current = document.querySelector('.screen.active')?.id;
+
+  // update lobby if host is watching
+  if (current === 's-lobby') renderLobby();
+
+  // update voted waiting screen
+  if (current === 's-voted') renderVotedStatus();
+
+  // check if all done
+  const voters = Object.values(sessionData.voters || {});
+  const allDone = voters.length > 0 && voters.every(v => v.done);
+  if (allDone) {
+    document.getElementById('see-results-btn').style.display = 'block';
+    document.getElementById('voted-results-btn').style.display = 'block';
+  }
+}
+
+// ── lobby ──────────────────────────────────────────────
+function renderLobby() {
+  if (!sessionData && !sessionCode) return;
+  const code = sessionCode;
+  document.getElementById('lobby-code').textContent = `#${code}`;
+  document.getElementById('lobby-code-big').textContent = code;
+
+  const url = window.location.href.split('?')[0] + '?join=' + code;
+  document.getElementById('share-url').textContent = url;
+
+  const mode = sessionData?.approvalMode || 'all';
+  document.getElementById('lobby-sub').textContent =
+    mode === 'all' ? 'Unanimous approval required — everyone must swipe right.' : 'Majority approval required.';
+
+  const voters = sessionData?.voters ? Object.values(sessionData.voters) : [];
+  const container = document.getElementById('lobby-voters');
+  container.innerHTML = voters.map(v => `
+    <div class="voter-row">
+      <div class="name">${v.name}${v.name === myName ? ' (you)' : ''}</div>
+      <div class="status ${v.done ? 'done' : 'pending'}">${v.done ? '✓ Done' : 'Pending'}</div>
+    </div>
+  `).join('');
+
+  const done = voters.filter(v => v.done).length;
+  document.getElementById('lobby-status').textContent = `${done} of ${voters.length} voter${voters.length !== 1 ? 's' : ''} done`;
+
+  const allDone = voters.length > 0 && voters.every(v => v.done);
+  document.getElementById('see-results-btn').style.display = allDone ? 'block' : 'none';
+}
+
+// ── swiping ────────────────────────────────────────────
+function startSwiping() {
+  currentPhotoIdx = 0;
+  document.getElementById('swipe-name').textContent = myName + "'s vote";
+  showScreen('s-swipe');
+  loadCard();
+}
+
+function loadCard() {
+  if (!sessionData?.photos) return;
+  const photos = sessionData.photos;
+  if (currentPhotoIdx >= photos.length) { finishVoting(); return; }
+  const p = photos[currentPhotoIdx];
+  document.getElementById('card-img').src = p.data;
+  document.getElementById('swipe-progress').textContent = `${currentPhotoIdx + 1} / ${photos.length}`;
+  document.getElementById('ov-yes').style.opacity = 0;
+  document.getElementById('ov-no').style.opacity  = 0;
+  resetCardPos();
+}
+
+// touch/drag
+let startX = 0, curX = 0, dragging = false;
+const card = document.getElementById('main-card');
+
+card.addEventListener('pointerdown', e => {
+  startX = e.clientX; dragging = true;
+  card.setPointerCapture(e.pointerId);
+  card.style.transition = 'none';
+});
+card.addEventListener('pointermove', e => {
+  if (!dragging) return;
+  curX = e.clientX - startX;
+  const rot = curX * 0.07;
+  card.style.transform = `translateX(${curX}px) rotate(${rot}deg)`;
+  const t = Math.min(Math.abs(curX) / 80, 1);
+  if (curX > 0) { document.getElementById('ov-yes').style.opacity = t; document.getElementById('ov-no').style.opacity = 0; }
+  else          { document.getElementById('ov-no').style.opacity  = t; document.getElementById('ov-yes').style.opacity = 0; }
+});
+card.addEventListener('pointerup', () => {
+  if (!dragging) return; dragging = false;
+  if (curX > 65) castVote(true);
+  else if (curX < -65) castVote(false);
+  else resetCardPos();
+});
+
+function resetCardPos() {
+  card.style.transition = 'transform 0.25s';
+  card.style.transform = 'none'; curX = 0;
+}
+
+window.castVote = async (keep) => {
+  const tx = keep ? '130%' : '-130%';
+  const rot = keep ? 15 : -15;
+  card.style.transition = 'transform 0.25s ease';
+  card.style.transform = `translateX(${tx}) rotate(${rot}deg)`;
+
+  // save vote to firebase
+  await update(ref(db, `sessions/${sessionCode}/voters/${myVoterId}/votes`), {
+    [`p${currentPhotoIdx}`]: keep
+  });
+
+  currentPhotoIdx++;
+  setTimeout(() => { loadCard(); }, 260);
+};
+
+async function finishVoting() {
+  await update(ref(db, `sessions/${sessionCode}/voters/${myVoterId}`), { done: true });
+  document.getElementById('voted-msg').textContent = `${myName}, you're done! 🎉`;
+  renderVotedStatus();
+  showScreen('s-voted');
+}
+
+function renderVotedStatus() {
+  if (!sessionData?.voters) return;
+  const voters = Object.values(sessionData.voters);
+  const done = voters.filter(v => v.done).length;
+  document.getElementById('voted-status').innerHTML = voters.map(v => `
+    <div style="font-size:14px;margin-bottom:6px;color:${v.done?'#16a34a':'#999'}">
+      ${v.done ? '✓' : '○'} ${v.name}
+    </div>
+  `).join('');
+  const allDone = voters.every(v => v.done);
+  document.getElementById('voted-results-btn').style.display = allDone ? 'block' : 'none';
+}
+
+// ── results ────────────────────────────────────────────
+window.showResults = () => {
+  if (!sessionData) return;
+  const photos = sessionData.photos || [];
+  const voters = Object.values(sessionData.voters || {});
+  const mode = sessionData.approvalMode || 'all';
+  const total = voters.length;
+
+  const kept = [], cut = [];
+  photos.forEach((p, i) => {
+    const key = `p${i}`;
+    const yesCount = voters.filter(v => v.votes && v.votes[key] === true).length;
+    const passes = mode === 'all' ? yesCount === total : yesCount > total / 2;
+    (passes ? kept : cut).push(p.data);
+  });
+
+  document.getElementById('r-kept').textContent = kept.length;
+  document.getElementById('r-total').textContent = photos.length;
+  document.getElementById('r-pct').textContent = photos.length ? Math.round(kept.length / photos.length * 100) + '%' : '—';
+
+  const kg = document.getElementById('kept-grid');
+  kg.innerHTML = kept.length
+    ? kept.map(d => `<img src="${d}" style="aspect-ratio:1;object-fit:cover;width:100%;display:block;">`).join('')
+    : '<div class="empty-state" style="grid-column:1/-1"><div class="big">😬</div>No photos survived</div>';
+
+  if (cut.length) {
+    document.getElementById('cut-label').textContent = `✕ Cut (${cut.length})`;
+    document.getElementById('cut-grid').innerHTML = cut.map(d => `<img src="${d}" style="aspect-ratio:1;object-fit:cover;width:100%;display:block;">`).join('');
+  } else {
+    document.getElementById('cut-section').style.display = 'none';
+  }
+
+  showScreen('s-results');
+};
+
+window.confirmEndSession = () => {
+  if (confirm('End this session? Voters can no longer join.')) {
+    update(ref(db, `sessions/${sessionCode}`), { active: false });
+    showScreen('s-home');
+  }
+};
+
+// ── auto-join from URL ─────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const joinCode = params.get('join');
+if (joinCode) {
+  document.getElementById('join-code').value = joinCode;
+  showScreen('s-home');
+}
+
+// init
+showScreen('s-home');
+</script>
+</body>
+</html>
